@@ -5,11 +5,49 @@ cache:
   directories:
   - $HOME/.docker_cargo
   - $TRAVIS_BUILD_DIR/target
+  - $HOME/.cache/yarn
 services:
   - docker
+stages:
+  - Build
+  - Test
+  # - Build $ Test
+before_install:
+  - docker pull cita/cita-build:ubuntu-18.04-20180703-solc-0.4.19
 jobs:
   include:
-    - stage: Build & Test
+    # - stage: Build & Test
+    # script:
+    #   - ./env.sh ./scripts/ci.sh
+
+    - stage: Build
+      name: Build the cita
+      cache: cargo
+      install:
+        - cd $TRAVIS_BUILD_DIR
       script:
-        - docker pull cita/cita-build:ubuntu-18.04-20180703-solc-0.4.19
-        - ./env.sh ./scripts/ci.sh
+        - ./env.sh make
+
+    - stage: Test
+      name: Start cita and run unit test of contract
+      language: node_js
+      node_js:
+        - lts/*
+      cache: yarn
+      install:
+        - cd $TRAVIS_BUILD_DIR
+        - ./env.sh make
+        - ./env.sh ./tests/integrate_test/cita_start.sh
+      before_script:
+        - cd $TRAVIS_BUILD_DIR/scripts/contracts/tests
+        - yarn install
+      script:
+        - npm run-script unit_group
+        - npm run-script unit_permission
+        - npm run-script unit_auth
+        - npm run-script unit_node
+        - npm run-script unit_chain
+        - npm run-script unit_gm
+        - npm run-script unit_pm
+        - npm run-script unit_rm
+        - npm run-script unit_qm
